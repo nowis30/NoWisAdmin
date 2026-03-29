@@ -1,114 +1,89 @@
 # NoWisAdmin
 
-NoWisAdmin est une application d administration privee separee de `site-nowis-web`.
+NoWisAdmin est un editeur visuel simple pour gerer le contenu et l apparence du site.
 
-Elle sert a gerer visuellement :
+Objectif UX: une personne non technique doit pouvoir modifier photos, textes, couleurs, boutons et sections sans jargon ni logique technique.
 
-- les textes principaux du site
-- les sections activables ou non
-- la bibliotheque media
-- les reglages de theme
-- une base de publication/snapshot propre
+Contraintes V1:
 
-## Choix techniques
+- interface tres simple et tres visuelle
+- pas de fonctions gadgets
+- pas d options avancees inutiles
+- pas de jargon developpeur dans l interface
+- pas d ecrans surcharges
+- apercu visuel prioritaire
+
+## Navigation
+
+L interface est organisee en 6 espaces clairs:
+
+1. Tableau de bord
+2. Pages
+3. Medias
+4. Couleurs et style
+5. Previsualisation
+6. Publication
+
+## Audit de reference (site public)
+
+Un audit complet de site-nowis-web est disponible ici:
+
+- docs/site-nowis-audit.md
+
+Ce document sert de base pour aligner l admin sur les vraies pages et sections du site public.
+
+## Parcours recommande
+
+1. Ouvrir Pages
+2. Choisir une page (Accueil, Musique, Videos, Ateliers, Contact, etc. selon tes donnees)
+3. Cliquer sur une section
+4. Modifier titre, sous-titre, texte, bouton, lien, image, couleur de fond, couleur de texte, visibilite
+5. Voir le rendu en direct dans l apercu a droite
+6. Ouvrir Previsualisation pour verifier l ensemble
+7. Ouvrir Publication pour publier la version
+
+## Ce qui a ete simplifie
+
+- Vocabulaire plus humain (moins de termes techniques)
+- Edition par page puis section
+- Cartes de sections visuelles avec action Modifier
+- Editeur de section en 2 colonnes: reglages a gauche, apercu live a droite
+- Gestion des couleurs plus explicite (usage de chaque couleur + exemple visuel)
+- Bibliotheque medias avec:
+  - miniatures
+  - usages connus (ou l image est utilisee)
+  - choix rapide pour une section
+  - remplacement direct d image
+- Publication separee de la previsualisation pour un parcours plus clair
+
+## Nouveau modele de sections (base sur le site reel)
+
+NoWisAdmin utilise maintenant un modele de sections metier:
+
+- hero
+- cards
+- process
+- trustStrip
+- contactInfo
+- socialLinks
+- finalCta
+- generic
+
+Chaque type affiche seulement les champs utiles pour reproduire les sections reelles du site.
+
+## Compatibilite avec site-nowis-web
+
+NoWisAdmin conserve un payload de publication stable pour la future lecture par site-nowis-web.
+
+Le contrat principal est toujours genere dans la previsualisation et enregistre lors de la publication.
+
+## Stack technique
 
 - Next.js 14 + App Router
 - TypeScript
 - Tailwind CSS
 - Prisma
-- SQLite locale par defaut pour isoler l admin au demarrage
-- Auth simple par email/mot de passe + cookie HTTP-only signee en JWT
-
-## Pourquoi une base separee par defaut
-
-`site-nowis-web` utilise deja Prisma sur une base PostgreSQL de production avec un historique de migrations reelles.
-
-Pour ne rien casser dans l existant, NoWisAdmin demarre avec une base SQLite locale minimaliste. Les modeles et conventions ont ete nommes pour permettre ensuite une evolution vers :
-
-1. une base partagee dediee au contenu
-2. une API lue par `site-nowis-web`
-3. un package partage pour les types et contrats
-
-## Structure
-
-```txt
-NoWisAdmin/
-├── app/
-│   ├── (admin)/
-│   │   ├── appearance/
-│   │   ├── content/
-│   │   ├── dashboard/
-│   │   ├── media/
-│   │   ├── preview/
-│   │   └── sections/
-│   ├── api/
-│   │   ├── auth/
-│   │   └── media/
-│   ├── login/
-│   ├── globals.css
-│   └── layout.tsx
-├── components/
-├── lib/
-├── prisma/
-├── public/
-│   └── uploads/
-└── types/
-```
-
-## Modeles Prisma
-
-Le schema couvre la base logique demandee :
-
-- `SiteSetting`
-- `ThemeSetting`
-- `Page`
-- `Section`
-- `MediaAsset`
-- `ContentBlock`
-- `PublishSnapshot`
-- `AdminUser`
-
-## Fonctionnement actuel
-
-### Tableau de bord
-- vue d ensemble des pages, sections, medias et blocs
-
-### Gestion du contenu
-- edition des titres, sous-titres, descriptions, CTA et blocs de contenu par section
-
-### Gestion des images
-- televersement local dans `public/uploads`
-- bibliotheque media visible dans l interface
-- association d une image a une section depuis la page Sections
-
-### Gestion de l apparence
-- edition des couleurs principales
-- edition des reglages globaux du site
-
-### Gestion des sections
-- activation/desactivation
-- tri manuel via `sortOrder`
-- selection d une image associee
-
-### Apercu et publication
-- creation de snapshots JSON en base
-- payload visible dans l interface
-
-## Integration future avec site-nowis-web
-
-L integration n est pas branchee automatiquement. La base est prete pour le faire ensuite de facon propre.
-
-Options recommandees :
-
-1. exposer une API de lecture cote NoWisAdmin pour le contenu publie
-2. deplacer ensuite les types de `types/site.ts` dans un package partage du workspace
-3. faire lire `site-nowis-web` depuis les snapshots publies ou directement depuis les tables de contenu
-
-Conventions deja preparees :
-
-- slugs de page explicites (`home`, etc.)
-- cles de section stables (`home.hero`, `home.services`)
-- contrat de payload d integration dans `types/site.ts`
+- SQLite (par defaut)
 
 ## Installation
 
@@ -122,21 +97,32 @@ npm run db:seed
 npm run dev
 ```
 
-Puis ouvrir `http://localhost:3000`.
+Puis ouvrir http://localhost:3000.
 
-## Identifiants de depart
+## Variables importantes
 
-Definis dans `.env` :
+Definies dans .env:
 
-- `NOWIS_ADMIN_DATABASE_URL`
-- `ADMIN_EMAIL`
-- `ADMIN_PASSWORD`
-- `ADMIN_NAME`
-- `ADMIN_JWT_SECRET`
+- NOWIS_ADMIN_DATABASE_URL
+- ADMIN_EMAIL
+- ADMIN_PASSWORD
+- ADMIN_NAME
+- ADMIN_JWT_SECRET
 
-## Points a brancher plus tard
+## Routes principales
 
-- stockage media externe si besoin
-- vraie publication vers `site-nowis-web`
-- partage de types/configs au niveau du workspace
-- roles multi-admin si un jour necessaire
+- /dashboard
+- /content
+- /media
+- /appearance
+- /preview
+- /publish
+
+## APIs principales
+
+- POST /api/admin/section-editor
+- POST /api/admin/site-settings
+- POST /api/admin/theme-settings
+- POST /api/admin/publish
+- POST /api/media/upload
+- POST /api/media/replace

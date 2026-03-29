@@ -28,6 +28,12 @@ export interface SectionContract {
   isActive: boolean;
   sortOrder: number;
   imageUrl: string | null;
+  blocks: Array<{
+    key: string;
+    label: string;
+    kind: ContentBlockKind;
+    value: string;
+  }>;
 }
 
 export interface PublishPayload {

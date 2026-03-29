@@ -55,7 +55,22 @@ export async function getSectionsManagementData() {
 }
 
 export async function getMediaLibrary() {
-  return prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' } });
+  return prisma.mediaAsset.findMany({
+    include: {
+      sections: {
+        select: {
+          id: true,
+          name: true,
+          page: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 }
 
 export async function buildPublishPayload(): Promise<PublishPayload> {
@@ -66,7 +81,12 @@ export async function buildPublishPayload(): Promise<PublishPayload> {
       include: {
         sections: {
           where: { isActive: true },
-          include: { image: true },
+          include: {
+            image: true,
+            blocks: {
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -91,6 +111,12 @@ export async function buildPublishPayload(): Promise<PublishPayload> {
         isActive: section.isActive,
         sortOrder: section.sortOrder,
         imageUrl: section.image?.url ?? null,
+        blocks: section.blocks.map((block) => ({
+          key: block.key,
+          label: block.label,
+          kind: block.kind,
+          value: block.value,
+        })),
       })),
     })),
   };

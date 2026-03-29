@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  revalidatePath('/publish');
   revalidatePath('/preview');
   revalidatePath('/dashboard');
-  return NextResponse.redirect(new URL('/preview?published=1', request.url));
+  return NextResponse.redirect(new URL('/publish?published=1', request.url));
 }

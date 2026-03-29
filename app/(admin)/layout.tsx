@@ -6,8 +6,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminShell
-      title="Espace d administration"
-      description="Base claire pour administrer les contenus, medias et reglages qui devront ensuite alimenter site-nowis-web."
+      title="Atelier visuel du site"
+      description="Choisis une piece, pose une photo, change les couleurs et vois le resultat tout de suite."
       adminName={session.name}
     >
       {children}
