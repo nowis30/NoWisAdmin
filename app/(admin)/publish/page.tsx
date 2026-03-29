@@ -1,7 +1,16 @@
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PublishPage({ searchParams }: { searchParams?: { published?: string } }) {
-  const snapshots = await prisma.publishSnapshot.findMany({ take: 8, orderBy: { createdAt: 'desc' } });
+  let snapshots: Array<{ id: string; createdAt: Date; notes: string | null }> = [];
+  let dbUnavailable = false;
+
+  try {
+    snapshots = await prisma.publishSnapshot.findMany({ take: 8, orderBy: { createdAt: 'desc' } });
+  } catch {
+    dbUnavailable = true;
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -24,6 +33,11 @@ export default async function PublishPage({ searchParams }: { searchParams?: { p
         {searchParams?.published === '1' ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             Publication enregistree avec succes.
+          </div>
+        ) : null}
+        {dbUnavailable ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Base de donnees indisponible pour le moment. Verifie NOWIS_ADMIN_DATABASE_URL.
           </div>
         ) : null}
       </section>
