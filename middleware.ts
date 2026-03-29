@@ -8,6 +8,11 @@ const protectedPrefixes = ['/dashboard', '/content', '/appearance', '/sections',
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow token-protected seed endpoint without admin cookie.
+  if (pathname === '/api/admin/seed') {
+    return NextResponse.next();
+  }
+
   if (!protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
