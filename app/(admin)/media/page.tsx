@@ -9,12 +9,15 @@ export default async function MediaPage({
   searchParams?: { uploaded?: string; replaced?: string; error?: string };
 }) {
   const media = await getMediaLibrary();
+  const isProd = process.env.NODE_ENV === 'production';
+  const storageMode = process.env.BLOB_READ_WRITE_TOKEN ? 'Vercel Blob' : 'Local';
 
   return (
     <div className="space-y-6">
       <section className="panel p-6">
         <h3 className="text-xl font-semibold text-ink">Medias</h3>
         <p className="mt-2 text-sm text-slate-600">Ajoute, remplace et choisis des images pour les sections du site.</p>
+        <p className="mt-2 text-xs text-slate-500">Stockage actif: {storageMode}{isProd && !process.env.BLOB_READ_WRITE_TOKEN ? ' (invalide en production sans token)' : ''}</p>
 
         <form action="/api/media/upload" method="post" encType="multipart/form-data" className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_1fr_auto] lg:items-end">
           <div>
@@ -36,7 +39,12 @@ export default async function MediaPage({
         {searchParams?.replaced === '1' ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Image remplacee.</div>
         ) : null}
-        {searchParams?.error ? (
+        {searchParams?.error === 'storage' ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Upload indisponible: configure BLOB_READ_WRITE_TOKEN sur Vercel, puis redeploie NoWisAdmin.
+          </div>
+        ) : null}
+        {searchParams?.error && searchParams?.error !== 'storage' ? (
           <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             Action impossible. Verifie le fichier puis reessaie. En production, configure aussi BLOB_READ_WRITE_TOKEN sur Vercel.
           </div>

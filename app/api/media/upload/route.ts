@@ -21,13 +21,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL('/media?error=upload', request.url));
   }
 
+  const isProd = process.env.NODE_ENV === 'production';
+  const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  if (isProd && !hasBlobToken) {
+    return NextResponse.redirect(new URL('/media?error=storage', request.url));
+  }
+
   try {
     const extension = path.extname(file.name) || '.bin';
     const safeBaseName = file.name.replace(/[^a-zA-Z0-9.-]/g, '-').replace(/-+/g, '-');
     const fileName = `${Date.now()}-${safeBaseName || `asset${extension}`}`;
 
     let publicUrl = '';
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    if (hasBlobToken) {
       const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
         access: 'public',
         token: process.env.BLOB_READ_WRITE_TOKEN,
