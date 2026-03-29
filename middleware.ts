@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const ADMIN_AUTH_COOKIE = 'nowis_admin_session';
 
-const protectedPrefixes = ['/dashboard', '/content', '/appearance', '/sections', '/media', '/preview', '/api/media'];
+const protectedPrefixes = ['/dashboard', '/content', '/appearance', '/sections', '/media', '/preview', '/api/media', '/api/admin'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/content/:path*', '/appearance/:path*', '/sections/:path*', '/media/:path*', '/preview/:path*', '/api/media/:path*'],
+  matcher: ['/dashboard/:path*', '/content/:path*', '/appearance/:path*', '/sections/:path*', '/media/:path*', '/preview/:path*', '/api/media/:path*', '/api/admin/:path*'],
 };

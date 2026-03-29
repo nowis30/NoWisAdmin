@@ -1,4 +1,3 @@
-import { updateSiteSettingsAction, updateThemeSettingsAction } from '@/lib/actions';
 import { getAppearanceData } from '@/lib/admin-data';
 
 export default async function AppearancePage() {
@@ -6,7 +5,7 @@ export default async function AppearancePage() {
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <form action={updateSiteSettingsAction} className="panel p-6">
+      <form action="/api/admin/site-settings" method="post" className="panel p-6">
         <h3 className="text-xl font-semibold text-ink">Reglages du site</h3>
         <p className="mt-2 text-sm text-slate-600">Base commune pour le site public: nom, SEO, CTA principal, URL source.</p>
 
@@ -40,7 +39,7 @@ export default async function AppearancePage() {
         <button type="submit" className="button-primary mt-5">Enregistrer les reglages</button>
       </form>
 
-      <form action={updateThemeSettingsAction} className="panel p-6">
+      <form action="/api/admin/theme-settings" method="post" className="panel p-6">
         <h3 className="text-xl font-semibold text-ink">Theme centralise</h3>
         <p className="mt-2 text-sm text-slate-600">Palette minimale et reutilisable pour raccorder ensuite `site-nowis-web` a une source unique.</p>
 

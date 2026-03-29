@@ -1,4 +1,3 @@
-import { updateSectionContentAction } from '@/lib/actions';
 import { getContentSections } from '@/lib/admin-data';
 
 export default async function ContentPage() {
@@ -18,7 +17,7 @@ export default async function ContentPage() {
 
           <div className="space-y-5">
             {page.sections.map((section) => (
-              <form key={section.id} action={updateSectionContentAction} className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <form key={section.id} action="/api/admin/section-content" method="post" className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                 <input type="hidden" name="sectionId" value={section.id} />
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

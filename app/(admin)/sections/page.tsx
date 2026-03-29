@@ -1,4 +1,3 @@
-import { updateSectionSettingsAction } from '@/lib/actions';
 import { getSectionsManagementData } from '@/lib/admin-data';
 
 export default async function SectionsPage() {
@@ -13,7 +12,7 @@ export default async function SectionsPage() {
 
           <div className="mt-6 space-y-4">
             {page.sections.map((section) => (
-              <form key={section.id} action={updateSectionSettingsAction} className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <form key={section.id} action="/api/admin/section-settings" method="post" className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
                 <input type="hidden" name="sectionId" value={section.id} />
 
                 <div className="grid gap-4 lg:grid-cols-[1fr_130px_220px_auto] lg:items-end">

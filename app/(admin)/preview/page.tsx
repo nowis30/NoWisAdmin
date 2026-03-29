@@ -1,4 +1,3 @@
-import { publishSnapshotAction } from '@/lib/actions';
 import { buildPublishPayload } from '@/lib/admin-data';
 import { prisma } from '@/lib/prisma';
 
@@ -11,7 +10,7 @@ export default async function PreviewPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <section className="space-y-6">
-        <form action={publishSnapshotAction} className="panel p-6">
+        <form action="/api/admin/publish" method="post" className="panel p-6">
           <h3 className="text-xl font-semibold text-ink">Publier un snapshot</h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">Pour l instant, la publication enregistre un snapshot JSON versionne. C est la base la plus propre pour brancher ensuite `site-nowis-web` sur une source partagee.</p>
           <div className="mt-5">
