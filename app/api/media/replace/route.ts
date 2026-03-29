@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
   }
 
   const isProd = process.env.NODE_ENV === 'production';
-  const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const hasBlobToken = Boolean(blobToken);
   if (isProd && !hasBlobToken) {
     return NextResponse.redirect(new URL('/media?error=storage-token', request.url));
   }
@@ -47,11 +48,18 @@ export async function POST(request: NextRequest) {
       try {
         const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
           access: 'public',
-          token: process.env.BLOB_READ_WRITE_TOKEN,
+          token: blobToken,
         });
         publicUrl = blob.url;
       } catch {
-        return NextResponse.redirect(new URL('/media?error=storage-write', request.url));
+        try {
+          const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
+            access: 'public',
+          });
+          publicUrl = blob.url;
+        } catch {
+          return NextResponse.redirect(new URL('/media?error=storage-write', request.url));
+        }
       }
     } else {
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
