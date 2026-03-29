@@ -18,13 +18,18 @@ export async function POST(request: NextRequest) {
   const altText = String(formData.get('altText') ?? '').trim();
 
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.redirect(new URL('/media?error=upload', request.url));
+    return NextResponse.redirect(new URL('/media?error=file', request.url));
+  }
+
+  // Keep uploads conservative to reduce provider-side request rejections.
+  if (file.size > 4 * 1024 * 1024) {
+    return NextResponse.redirect(new URL('/media?error=file-too-large', request.url));
   }
 
   const isProd = process.env.NODE_ENV === 'production';
   const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
   if (isProd && !hasBlobToken) {
-    return NextResponse.redirect(new URL('/media?error=storage', request.url));
+    return NextResponse.redirect(new URL('/media?error=storage-token', request.url));
   }
 
   try {
@@ -34,11 +39,15 @@ export async function POST(request: NextRequest) {
 
     let publicUrl = '';
     if (hasBlobToken) {
-      const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
-        access: 'public',
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-      });
-      publicUrl = blob.url;
+      try {
+        const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
+          access: 'public',
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        publicUrl = blob.url;
+      } catch {
+        return NextResponse.redirect(new URL('/media?error=storage-write', request.url));
+      }
     } else {
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
       await mkdir(uploadsDir, { recursive: true });
