@@ -37,7 +37,9 @@ export default async function MediaPage({
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Image remplacee.</div>
         ) : null}
         {searchParams?.error ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Action impossible. Verifie le fichier puis reessaie.</div>
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Action impossible. Verifie le fichier puis reessaie. En production, configure aussi BLOB_READ_WRITE_TOKEN sur Vercel.
+          </div>
         ) : null}
       </section>
 

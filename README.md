@@ -123,6 +123,7 @@ Definies dans .env:
 - ADMIN_JWT_SECRET
 - ADMIN_SEED_TOKEN (optionnel, route seed)
 - ALLOW_ADMIN_SEED_IN_PROD (optionnel, doit etre `true` pour autoriser seed en production)
+- BLOB_READ_WRITE_TOKEN (requis en production Vercel pour upload/remplacement d images)
 
 ## Routes principales
 

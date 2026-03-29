@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 
 import { getSessionFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -20,27 +21,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL('/media?error=upload', request.url));
   }
 
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  await mkdir(uploadsDir, { recursive: true });
+  try {
+    const extension = path.extname(file.name) || '.bin';
+    const safeBaseName = file.name.replace(/[^a-zA-Z0-9.-]/g, '-').replace(/-+/g, '-');
+    const fileName = `${Date.now()}-${safeBaseName || `asset${extension}`}`;
 
-  const extension = path.extname(file.name) || '.bin';
-  const safeBaseName = file.name.replace(/[^a-zA-Z0-9.-]/g, '-').replace(/-+/g, '-');
-  const fileName = `${Date.now()}-${safeBaseName || `asset${extension}`}`;
-  const filePath = path.join(uploadsDir, fileName);
-  const buffer = Buffer.from(await file.arrayBuffer());
+    let publicUrl = '';
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
+        access: 'public',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      publicUrl = blob.url;
+    } else {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      await mkdir(uploadsDir, { recursive: true });
+      const filePath = path.join(uploadsDir, fileName);
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(filePath, buffer);
+      publicUrl = `/uploads/${fileName}`;
+    }
 
-  await writeFile(filePath, buffer);
+    await prisma.mediaAsset.create({
+      data: {
+        fileName,
+        originalName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        altText: altText || null,
+        url: publicUrl,
+      },
+    });
 
-  await prisma.mediaAsset.create({
-    data: {
-      fileName,
-      originalName: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      fileSize: file.size,
-      altText: altText || null,
-      url: `/uploads/${fileName}`,
-    },
-  });
-
-  return NextResponse.redirect(new URL('/media?uploaded=1', request.url));
+    return NextResponse.redirect(new URL('/media?uploaded=1', request.url));
+  } catch {
+    return NextResponse.redirect(new URL('/media?error=upload', request.url));
+  }
 }

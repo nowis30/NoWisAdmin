@@ -3,6 +3,12 @@ const nextConfig = {
   output: 'standalone',
   images: {
     unoptimized: false,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+      },
+    ],
   },
 };
 
