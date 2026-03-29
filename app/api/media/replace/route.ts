@@ -14,6 +14,11 @@ function classifyBlobError(error: unknown) {
   return 'storage-write';
 }
 
+function logBlobError(stage: 'token' | 'native', error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || 'Unknown error');
+  console.error(`[MEDIA_REPLACE_BLOB_${stage.toUpperCase()}] ${message}`);
+}
+
 function valueOf(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
@@ -59,12 +64,14 @@ export async function POST(request: NextRequest) {
         });
         publicUrl = blob.url;
       } catch (errorWithToken) {
+        logBlobError('token', errorWithToken);
         try {
           const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
             access: 'public',
           });
           publicUrl = blob.url;
         } catch (fallbackError) {
+          logBlobError('native', fallbackError);
           const code = classifyBlobError(fallbackError || errorWithToken);
           return NextResponse.redirect(new URL(`/media?error=${code}`, request.url));
         }
