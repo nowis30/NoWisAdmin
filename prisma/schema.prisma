@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("NOWIS_ADMIN_DATABASE_URL")
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ContentBlockKind {
+  TEXT
+  LINK
+  RICH_TEXT
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SiteSetting {
+  id                    String   @id @default(cuid())
+  siteName              String
+  siteUrl               String
+  defaultSeoTitle       String
+  defaultSeoDescription String
+  defaultCtaLabel       String
+  defaultCtaHref        String
+  updatedAt             DateTime @updatedAt
+}
+
+model ThemeSetting {
+  id           String   @id @default(cuid())
+  primaryColor String
+  accentColor  String
+  surfaceColor String
+  textColor    String
+  mutedColor   String
+  borderRadius String
+  updatedAt    DateTime @updatedAt
+}
+
+model Page {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  description String?
+  seoTitle    String?
+  seoDescription String?
+  status      PageStatus @default(DRAFT)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  sections    Section[]
+}
+
+model Section {
+  id          String        @id @default(cuid())
+  pageId      String
+  key         String        @unique
+  name        String
+  title       String
+  subtitle    String?
+  description String?
+  ctaLabel    String?
+  ctaHref     String?
+  isActive    Boolean       @default(true)
+  sortOrder   Int           @default(0)
+  imageId     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  page        Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  image       MediaAsset?   @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  blocks      ContentBlock[]
+
+  @@index([pageId, sortOrder])
+}
+
+model ContentBlock {
+  id        String           @id @default(cuid())
+  sectionId String
+  key       String
+  label     String
+  kind      ContentBlockKind @default(TEXT)
+  value     String
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  section   Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, key])
+  @@index([sectionId, sortOrder])
+}
+
+model MediaAsset {
+  id           String    @id @default(cuid())
+  fileName     String    @unique
+  originalName String
+  mimeType     String
+  fileSize     Int
+  altText      String?
+  url          String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sections     Section[]
+}
+
+model PublishSnapshot {
+  id          String   @id @default(cuid())
+  notes       String?
+  payload     String
+  createdAt   DateTime @default(now())
+}

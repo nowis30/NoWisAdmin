@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-sand text-ink font-sans antialiased;
+  background-image: radial-gradient(circle at top left, rgba(31, 77, 75, 0.08), transparent 28%), linear-gradient(180deg, rgba(246, 241, 232, 0.90), #ffffff 45%, #f8fafc 100%);
+}
+
+a {
+  @apply transition-colors;
+}
+
+input,
+textarea,
+select {
+  @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/15;
+}
+
+textarea {
+  @apply min-h-[110px] resize-y;
+}
+
+label {
+  @apply mb-2 block text-sm font-medium text-slate-700;
+}
+
+.panel {
+  @apply rounded-[28px] border border-white/70 bg-white/90 shadow-panel backdrop-blur;
+}
+
+.button-primary {
+  @apply inline-flex items-center justify-center rounded-full bg-pine px-5 py-3 text-sm font-semibold text-white hover:bg-[#173c3a];
+}
+
+.button-secondary {
+  @apply inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:border-pine hover:text-pine;
+}
+
+.button-danger {
+  @apply inline-flex items-center justify-center rounded-full bg-ember px-5 py-3 text-sm font-semibold text-white hover:bg-[#b2562c];
+}
