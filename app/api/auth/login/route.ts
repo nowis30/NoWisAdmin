@@ -3,11 +3,24 @@ import { NextResponse } from 'next/server';
 
 import { ADMIN_AUTH_COOKIE, authenticateAdmin, signAuthToken } from '@/lib/auth';
 
+function normalizeNextPath(rawNext: string) {
+  if (!rawNext) {
+    return '/dashboard';
+  }
+
+  // Accept only internal absolute paths to avoid invalid/unsafe redirects.
+  if (!rawNext.startsWith('/') || rawNext.startsWith('//')) {
+    return '/dashboard';
+  }
+
+  return rawNext;
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
-  const nextUrl = String(formData.get('next') ?? '/dashboard');
+  const nextUrl = normalizeNextPath(String(formData.get('next') ?? '/dashboard'));
 
   const admin = await authenticateAdmin(email, password);
   if (!admin) {
@@ -23,5 +36,5 @@ export async function POST(request: Request) {
     path: '/',
   });
 
-  return NextResponse.redirect(new URL(nextUrl || '/dashboard', request.url));
+  return NextResponse.redirect(new URL(nextUrl, request.url));
 }
