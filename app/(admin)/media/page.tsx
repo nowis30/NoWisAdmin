@@ -15,6 +15,8 @@ export default async function MediaPage({
   const errorMessage =
     searchParams?.error === 'storage-token'
       ? 'Upload indisponible: ajoute BLOB_READ_WRITE_TOKEN sur Vercel puis redeploie NoWisAdmin.'
+      : searchParams?.error === 'storage-private'
+        ? 'Le Blob store est prive. Passe le store en public ou utilise un Blob public, puis redeploie.'
       : searchParams?.error === 'storage-404'
         ? 'Stockage Blob introuvable (404). Le token ne pointe pas vers un Blob actif pour ce projet/team.'
         : searchParams?.error === 'storage-403'

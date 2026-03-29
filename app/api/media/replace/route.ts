@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 
 function classifyBlobError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || '');
+  if (message.includes('Cannot use public access on a private store')) return 'storage-private';
   if (message.includes('404')) return 'storage-404';
   if (message.includes('403') || message.toLowerCase().includes('forbidden')) return 'storage-403';
   return 'storage-write';
