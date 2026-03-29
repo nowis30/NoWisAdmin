@@ -7,6 +7,13 @@ import { put } from '@vercel/blob';
 import { getSessionFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+function classifyBlobError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (message.includes('404')) return 'storage-404';
+  if (message.includes('403') || message.toLowerCase().includes('forbidden')) return 'storage-403';
+  return 'storage-write';
+}
+
 export async function POST(request: NextRequest) {
   const session = getSessionFromRequest(request);
   if (!session) {
@@ -46,14 +53,15 @@ export async function POST(request: NextRequest) {
           token: blobToken,
         });
         publicUrl = blob.url;
-      } catch {
+      } catch (errorWithToken) {
         try {
           const blob = await put(`nowis-admin/uploads/${fileName}`, file, {
             access: 'public',
           });
           publicUrl = blob.url;
-        } catch {
-          return NextResponse.redirect(new URL('/media?error=storage-write', request.url));
+        } catch (fallbackError) {
+          const code = classifyBlobError(fallbackError || errorWithToken);
+          return NextResponse.redirect(new URL(`/media?error=${code}`, request.url));
         }
       }
     } else {
