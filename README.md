@@ -83,7 +83,7 @@ Le contrat principal est toujours genere dans la previsualisation et enregistre 
 - TypeScript
 - Tailwind CSS
 - Prisma
-- SQLite (par defaut)
+- PostgreSQL (via NOWIS_ADMIN_DATABASE_URL)
 
 ## Installation
 
