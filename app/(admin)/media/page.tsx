@@ -76,7 +76,13 @@ export default async function MediaPage({
           {media.map((asset) => (
             <article key={asset.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
               <div className="relative aspect-[4/3] bg-white">
-                <Image src={asset.url} alt={asset.altText ?? asset.originalName} fill className="object-cover" unoptimized />
+                {isProd && asset.url.startsWith('/uploads/') ? (
+                  <div className="flex h-full items-center justify-center bg-slate-100 px-4 text-center text-xs text-slate-600">
+                    Image legacy non disponible en production. Remplace cette image pour la migrer vers Blob.
+                  </div>
+                ) : (
+                  <Image src={asset.url} alt={asset.altText ?? asset.originalName} fill className="object-cover" unoptimized />
+                )}
               </div>
 
               <div className="space-y-3 p-4">
