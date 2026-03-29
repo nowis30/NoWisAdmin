@@ -5,7 +5,11 @@ declare global {
   var __nowisAdminPrisma__: PrismaClient | undefined;
 }
 
-export const prisma = global.__nowisAdminPrisma__ ?? new PrismaClient();
+export const prisma =
+  global.__nowisAdminPrisma__ ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+  });
 
 if (process.env.NODE_ENV !== 'production') {
   global.__nowisAdminPrisma__ = prisma;
