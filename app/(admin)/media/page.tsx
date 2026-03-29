@@ -64,12 +64,18 @@ export default async function MediaPage({
           {media.map((asset) => (
             <article key={asset.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
               <div className="relative aspect-[4/3] bg-white">
-                <Image src={asset.url} alt={asset.altText ?? asset.originalName} fill className="object-cover" />
+                <Image src={asset.url} alt={asset.altText ?? asset.originalName} fill className="object-cover" unoptimized />
               </div>
 
               <div className="space-y-3 p-4">
                 <p className="truncate text-sm font-semibold text-ink">{asset.originalName}</p>
                 <p className="text-xs text-slate-500">{asset.altText || 'Pas de description'}</p>
+                <p className="truncate text-[11px] text-slate-500">URL: {asset.url}</p>
+                {isProd && asset.url.startsWith('/uploads/') ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    Cette image pointe vers un ancien chemin local (/uploads) et peut retourner 404 en production. Remplace-la pour la migrer vers Blob.
+                  </div>
+                ) : null}
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-3">
                   <p className="text-xs font-semibold text-slate-600">Utilisee dans</p>
@@ -84,6 +90,9 @@ export default async function MediaPage({
                   <Link href={`/content?mediaId=${asset.id}`} className="button-secondary px-4 py-2 text-xs">
                     Choisir pour une section
                   </Link>
+                  <a href={asset.url} target="_blank" rel="noreferrer" className="button-secondary px-4 py-2 text-xs">
+                    Ouvrir le fichier
+                  </a>
                 </div>
 
                 <form action="/api/media/replace" method="post" encType="multipart/form-data" className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3">
