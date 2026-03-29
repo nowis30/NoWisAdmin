@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
-import type { ContentBlockKind, PageStatus } from '@prisma/client';
 
 /**
  * POST /api/admin/seed
@@ -16,6 +15,16 @@ import type { ContentBlockKind, PageStatus } from '@prisma/client';
  */
 export async function POST(request: Request) {
   try {
+    const isProd = process.env.NODE_ENV === 'production';
+    const allowInProd = process.env.ALLOW_ADMIN_SEED_IN_PROD === 'true';
+
+    if (isProd && !allowInProd) {
+      return NextResponse.json(
+        { error: 'Seed endpoint disabled in production.' },
+        { status: 403 },
+      );
+    }
+
     // Validate seed token
     const seedToken = request.headers.get('x-admin-seed-token');
     const expectedToken = process.env.ADMIN_SEED_TOKEN;

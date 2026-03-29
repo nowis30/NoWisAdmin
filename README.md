@@ -1,17 +1,8 @@
 # NoWisAdmin
 
-NoWisAdmin est un editeur visuel simple pour gerer le contenu et l apparence du site.
+NoWisAdmin est le studio de pages visuel de NoWis pour piloter le site public sans toucher au code.
 
-Objectif UX: une personne non technique doit pouvoir modifier photos, textes, couleurs, boutons et sections sans jargon ni logique technique.
-
-Contraintes V1:
-
-- interface tres simple et tres visuelle
-- pas de fonctions gadgets
-- pas d options avancees inutiles
-- pas de jargon developpeur dans l interface
-- pas d ecrans surcharges
-- apercu visuel prioritaire
+Objectif produit V2: un outil quotidien fiable, clair et rassurant, avec un vrai flux brouillon -> apercu -> publication.
 
 ## Navigation
 
@@ -23,6 +14,26 @@ L interface est organisee en 6 espaces clairs:
 4. Couleurs et style
 5. Previsualisation
 6. Publication
+
+## Etat V2 (finalisation)
+
+Ce qui est en place:
+
+- Edition par page et section (desktop-first, souris)
+- Deplacement, duplication, masquage, suppression de sections
+- Edition image avec cadrage, zoom, focal point et apercu immediat
+- Apercu proche production avec pages et devices
+- Autosave visible (saving/saved/error/retry)
+- Quality gate publication (blocking, warning, suggestion)
+- Contrat admin/runtime valide par scripts de test
+
+## Documentation utile
+
+- Rapport de finalisation: `docs/nowisadmin-final-report.md`
+- Validation V2 phases 5-6: `docs/v2-phase5-phase6-validation.md`
+- Fidelite runtime musique: `docs/v2-musique-fidelity-report.md`
+- Checklist QA musique: `docs/v2-musique-manual-qa-checklist.md`
+- Checklist go-live immediate: `docs/v2-go-live-now-checklist.md`
 
 ## Audit de reference (site public)
 
@@ -77,6 +88,8 @@ NoWisAdmin conserve un payload de publication stable pour la future lecture par 
 
 Le contrat principal est toujours genere dans la previsualisation et enregistre lors de la publication.
 
+Le site public lit le payload admin avec fallback de securite pendant la transition.
+
 ## Stack technique
 
 - Next.js 14 + App Router
@@ -108,6 +121,8 @@ Definies dans .env:
 - ADMIN_PASSWORD
 - ADMIN_NAME
 - ADMIN_JWT_SECRET
+- ADMIN_SEED_TOKEN (optionnel, route seed)
+- ALLOW_ADMIN_SEED_IN_PROD (optionnel, doit etre `true` pour autoriser seed en production)
 
 ## Routes principales
 
