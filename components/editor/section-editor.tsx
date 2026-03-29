@@ -8,6 +8,7 @@ interface SectionEditorProps {
   sectionModel: SectionModel;
   form: SectionFormState;
   mediaAssets: EditorMediaAsset[];
+  onOpenImageStyle: () => void;
   onChange: (patch: Partial<SectionFormState>) => void;
   onChangeExtraField: (key: string, value: string) => void;
   onSave: () => void;
@@ -15,12 +16,23 @@ interface SectionEditorProps {
   saveMessage: string;
 }
 
-export function SectionEditor({ section, sectionModel, form, mediaAssets, onChange, onChangeExtraField, onSave, isSaving, saveMessage }: SectionEditorProps) {
+export function SectionEditor({
+  section,
+  sectionModel,
+  form,
+  mediaAssets,
+  onOpenImageStyle,
+  onChange,
+  onChangeExtraField,
+  onSave,
+  isSaving,
+  saveMessage,
+}: SectionEditorProps) {
   return (
-    <section className="rounded-[30px] border border-slate-200 bg-white p-5">
+    <section className="rounded-[30px] border border-white/70 bg-white/92 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.10)] backdrop-blur">
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">3. Retoucher cette zone</p>
-        <h3 className="mt-2 text-xl font-semibold text-ink">{section.name}</h3>
+        <h3 className="mt-2 text-xl font-semibold leading-tight text-ink">{section.name}</h3>
         <p className="mt-2 text-sm text-slate-600">{sectionModel.summary}</p>
       </div>
 
@@ -56,7 +68,7 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
           <p className="text-sm font-semibold text-ink">Mise en page de cette zone</p>
           <p className="mt-1 text-xs text-slate-500">Des reglages simples pour adapter le rendu, sans casser le mobile.</p>
 
@@ -75,6 +87,18 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
             </div>
 
             <div>
+              <label htmlFor="section-content-align">Alignement du contenu</label>
+              <select
+                id="section-content-align"
+                value={form.contentAlign}
+                onChange={(event) => onChange({ contentAlign: event.target.value as SectionFormState['contentAlign'] })}
+              >
+                <option value="left">Aligne a gauche</option>
+                <option value="center">Centre</option>
+              </select>
+            </div>
+
+            <div>
               <label htmlFor="section-vertical-spacing">Hauteur de la zone</label>
               <select
                 id="section-vertical-spacing"
@@ -84,6 +108,46 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
                 <option value="tight">Compacte</option>
                 <option value="normal">Normale</option>
                 <option value="airy">Aeree</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="section-heading-scale">Impact du titre</label>
+              <select
+                id="section-heading-scale"
+                value={form.headingScale}
+                onChange={(event) => onChange({ headingScale: event.target.value as SectionFormState['headingScale'] })}
+              >
+                <option value="sm">Discret</option>
+                <option value="md">Equilibre</option>
+                <option value="lg">Fort</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="section-mobile-spacing">Densite mobile</label>
+              <select
+                id="section-mobile-spacing"
+                value={form.mobileSpacing}
+                onChange={(event) => onChange({ mobileSpacing: event.target.value as SectionFormState['mobileSpacing'] })}
+              >
+                <option value="inherit">Suivre le reglage principal</option>
+                <option value="compact">Plus compact</option>
+                <option value="comfortable">Confortable</option>
+                <option value="airy">Plus aere</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="section-mobile-align">Alignement mobile</label>
+              <select
+                id="section-mobile-align"
+                value={form.mobileAlign}
+                onChange={(event) => onChange({ mobileAlign: event.target.value as SectionFormState['mobileAlign'] })}
+              >
+                <option value="inherit">Suivre le reglage principal</option>
+                <option value="left">Force a gauche</option>
+                <option value="center">Force au centre</option>
               </select>
             </div>
           </div>
@@ -97,7 +161,7 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
               type="color"
               value={form.backgroundColor}
               onChange={(event) => onChange({ backgroundColor: event.target.value })}
-              className="h-12"
+              className="h-12 cursor-pointer"
             />
             <p className="mt-1 text-xs text-slate-500">La couleur derriere cette zone.</p>
           </div>
@@ -108,7 +172,7 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
               type="color"
               value={form.textColor}
               onChange={(event) => onChange({ textColor: event.target.value })}
-              className="h-12"
+              className="h-12 cursor-pointer"
             />
             <p className="mt-1 text-xs text-slate-500">La couleur des mots dans cette zone.</p>
           </div>
@@ -118,8 +182,28 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
 
         <MediaPicker assets={mediaAssets} selectedImageId={form.imageId} onSelect={(imageId) => onChange({ imageId })} />
 
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-ink">Studio photo de cette image</p>
+              <p className="mt-1 text-xs text-slate-500">Ouvre le studio: deplace a la souris, cadre, zoome, et vois le resultat direct dans la page.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenImageStyle}
+              disabled={!form.imageId}
+              className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Ouvrir le studio
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-slate-600">
+            Reglages actuels: zoom {form.imageZoom.toFixed(2)}x, position {Math.round(form.imageFocalX)}% / {Math.round(form.imageFocalY)}%, mode {form.imageFit}, format {form.imageAspectRatio}.
+          </p>
+        </div>
+
         {sectionModel.fields.length > 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/85 p-4">
             <p className="text-sm font-semibold text-ink">Champs utiles pour cette zone</p>
             <p className="mt-1 text-xs text-slate-500">Ces champs correspondent a la vraie structure du site public.</p>
 
@@ -149,8 +233,10 @@ export function SectionEditor({ section, sectionModel, form, mediaAssets, onChan
         ) : null}
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">{saveMessage || '4. Quand c est bon, enregistre cette zone.'}</p>
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
+        <p className={`rounded-lg px-2.5 py-1 text-xs font-medium ${saveMessage ? 'bg-slate-100 text-slate-700' : 'text-slate-500'}`}>
+          {saveMessage || '4. Quand c est bon, enregistre cette zone.'}
+        </p>
         <button type="button" onClick={onSave} disabled={isSaving} className="button-primary">
           {isSaving ? 'Enregistrement...' : 'Enregistrer la zone'}
         </button>

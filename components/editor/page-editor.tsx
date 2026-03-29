@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { ImageStyleModal } from '@/components/editor/image-style-modal';
 import { LivePreview } from '@/components/editor/live-preview';
 import { SectionCard } from '@/components/editor/section-card';
 import { SectionEditor } from '@/components/editor/section-editor';
@@ -13,6 +14,16 @@ const BLOCK_STYLE_BG = 'style.backgroundColor';
 const BLOCK_STYLE_TEXT = 'style.textColor';
 const BLOCK_STYLE_WIDTH = 'style.contentWidth';
 const BLOCK_STYLE_SPACING = 'style.verticalSpacing';
+const BLOCK_STYLE_ALIGN = 'style.contentAlign';
+const BLOCK_STYLE_HEADING = 'style.headingScale';
+const BLOCK_STYLE_MOBILE_SPACING = 'style.mobileSpacing';
+const BLOCK_STYLE_MOBILE_ALIGN = 'style.mobileAlign';
+const BLOCK_IMAGE_ALT = 'style.image.altText';
+const BLOCK_IMAGE_FOCAL_X = 'style.image.focalX';
+const BLOCK_IMAGE_FOCAL_Y = 'style.image.focalY';
+const BLOCK_IMAGE_ZOOM = 'style.image.zoom';
+const BLOCK_IMAGE_FIT = 'style.image.fit';
+const BLOCK_IMAGE_RATIO = 'style.image.aspectRatio';
 
 interface ChecklistItem {
 	id: string;
@@ -20,8 +31,74 @@ interface ChecklistItem {
 	targetId?: string;
 }
 
+type AutosaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+type ImageStylePatch = Pick<
+	SectionFormState,
+	'imageAltText' | 'imageFocalX' | 'imageFocalY' | 'imageZoom' | 'imageFit' | 'imageAspectRatio'
+>;
+
 function getBlockValue(section: EditorSection, key: string) {
 	return section.blocks.find((block) => block.key === key)?.value ?? '';
+}
+
+function pickImageStylePatch(form: SectionFormState): ImageStylePatch {
+	return {
+		imageAltText: form.imageAltText,
+		imageFocalX: form.imageFocalX,
+		imageFocalY: form.imageFocalY,
+		imageZoom: form.imageZoom,
+		imageFit: form.imageFit,
+		imageAspectRatio: form.imageAspectRatio,
+	};
+}
+
+function getNumberBlockValue(section: EditorSection, key: string, fallback: number, min: number, max: number) {
+	const raw = Number(getBlockValue(section, key));
+	if (!Number.isFinite(raw)) {
+		return fallback;
+	}
+
+	return Math.max(min, Math.min(max, raw));
+}
+
+function getImageFitValue(section: EditorSection): SectionFormState['imageFit'] {
+	const value = getBlockValue(section, BLOCK_IMAGE_FIT);
+	return value === 'contain' ? 'contain' : 'cover';
+}
+
+function getImageRatioValue(section: EditorSection): SectionFormState['imageAspectRatio'] {
+	const value = getBlockValue(section, BLOCK_IMAGE_RATIO);
+	if (value === '16/9' || value === '4/3' || value === '1/1') {
+		return value;
+	}
+
+	return 'auto';
+}
+
+function upsertSectionBlocks(
+	section: EditorSection,
+	nextValues: Array<{ key: string; value: string; label: string; kind: 'TEXT' | 'LINK' | 'RICH_TEXT' }>,
+) {
+	const map = new Map(section.blocks.map((block) => [block.key, block]));
+
+	for (const entry of nextValues) {
+		const existing = map.get(entry.key);
+		if (existing) {
+			map.set(entry.key, { ...existing, value: entry.value, label: entry.label, kind: entry.kind });
+			continue;
+		}
+
+		map.set(entry.key, {
+			id: `${section.id}-${entry.key}`,
+			key: entry.key,
+			label: entry.label,
+			kind: entry.kind,
+			value: entry.value,
+		});
+	}
+
+	return Array.from(map.values());
 }
 
 function getExtraFieldValues(section: EditorSection) {
@@ -43,10 +120,20 @@ function buildSectionForm(section: EditorSection): SectionFormState {
 		ctaLabel: section.ctaLabel || '',
 		ctaHref: section.ctaHref || '',
 		imageId: section.imageId || '',
+		imageAltText: getBlockValue(section, BLOCK_IMAGE_ALT) || '',
+		imageFocalX: getNumberBlockValue(section, BLOCK_IMAGE_FOCAL_X, 50, 0, 100),
+		imageFocalY: getNumberBlockValue(section, BLOCK_IMAGE_FOCAL_Y, 50, 0, 100),
+		imageZoom: getNumberBlockValue(section, BLOCK_IMAGE_ZOOM, 1, 1, 2.5),
+		imageFit: getImageFitValue(section),
+		imageAspectRatio: getImageRatioValue(section),
 		backgroundColor: getBlockValue(section, BLOCK_STYLE_BG) || '#f8fafc',
 		textColor: getBlockValue(section, BLOCK_STYLE_TEXT) || '#141826',
 		contentWidth: (getBlockValue(section, BLOCK_STYLE_WIDTH) as SectionFormState['contentWidth']) || 'normal',
 		verticalSpacing: (getBlockValue(section, BLOCK_STYLE_SPACING) as SectionFormState['verticalSpacing']) || 'normal',
+		contentAlign: (getBlockValue(section, BLOCK_STYLE_ALIGN) as SectionFormState['contentAlign']) || 'left',
+		headingScale: (getBlockValue(section, BLOCK_STYLE_HEADING) as SectionFormState['headingScale']) || 'md',
+		mobileSpacing: (getBlockValue(section, BLOCK_STYLE_MOBILE_SPACING) as SectionFormState['mobileSpacing']) || 'inherit',
+		mobileAlign: (getBlockValue(section, BLOCK_STYLE_MOBILE_ALIGN) as SectionFormState['mobileAlign']) || 'inherit',
 		isActive: section.isActive,
 		extraFields: getExtraFieldValues(section),
 	};
@@ -56,6 +143,7 @@ interface PageEditorProps {
 	initialPages: EditorPage[];
 	mediaAssets: EditorMediaAsset[];
 	suggestedMediaId?: string;
+	initialSelectedPageId?: string;
 }
 
 interface PageBuilderResponse {
@@ -68,6 +156,12 @@ interface PageBuilderResponse {
 
 function statusLabel(status?: 'DRAFT' | 'PUBLISHED') {
 	return status === 'PUBLISHED' ? 'Publiee' : 'Brouillon';
+}
+
+function statusBadgeClass(status?: 'DRAFT' | 'PUBLISHED') {
+	return status === 'PUBLISHED'
+		? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200'
+		: 'bg-amber-100 text-amber-700 ring-1 ring-amber-200';
 }
 
 function isValidHref(value: string) {
@@ -112,9 +206,9 @@ function getSectionChecklist(formState: SectionFormState) {
 	return items;
 }
 
-export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: PageEditorProps) {
+export function PageEditor({ initialPages, mediaAssets, suggestedMediaId, initialSelectedPageId }: PageEditorProps) {
 	const [pages, setPages] = useState(initialPages);
-	const [selectedPageId, setSelectedPageId] = useState(initialPages[0]?.id ?? '');
+	const [selectedPageId, setSelectedPageId] = useState(initialSelectedPageId ?? initialPages[0]?.id ?? '');
 	const selectedPage = useMemo(() => pages.find((page) => page.id === selectedPageId) ?? pages[0], [pages, selectedPageId]);
 
 	const [selectedSectionId, setSelectedSectionId] = useState(selectedPage?.sections[0]?.id ?? '');
@@ -134,15 +228,29 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 		ctaLabel: '',
 		ctaHref: '',
 		imageId: '',
+		imageAltText: '',
+		imageFocalX: 50,
+		imageFocalY: 50,
+		imageZoom: 1,
+		imageFit: 'cover',
+		imageAspectRatio: 'auto',
 		backgroundColor: '#f8fafc',
 		textColor: '#141826',
 		contentWidth: 'normal',
 		verticalSpacing: 'normal',
+		contentAlign: 'left',
+		headingScale: 'md',
+		mobileSpacing: 'inherit',
+		mobileAlign: 'inherit',
 		isActive: true,
 		extraFields: {},
 	});
+	const [isImageStyleModalOpen, setIsImageStyleModalOpen] = useState(false);
+	const [imageStyleBeforeEdit, setImageStyleBeforeEdit] = useState<ImageStylePatch | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveMessage, setSaveMessage] = useState('');
+	const [autosaveState, setAutosaveState] = useState<AutosaveState>('idle');
+	const [autosaveStamp, setAutosaveStamp] = useState<string>('');
 	const [builderMessage, setBuilderMessage] = useState('');
 	const [busyAction, setBusyAction] = useState<string | null>(null);
 	const [isPublishing, setIsPublishing] = useState(false);
@@ -150,6 +258,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 	const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 	const [previewMode, setPreviewMode] = useState<'editing' | 'final'>('editing');
 	const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
+	const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (!selectedPage || !selectedSection) {
@@ -159,6 +268,8 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 		const latestSection = selectedPage.sections.find((section) => section.id === selectedSection.id);
 		if (latestSection) {
 			setForm(buildSectionForm(latestSection));
+			setAutosaveState('idle');
+			setAutosaveStamp('');
 		}
 	}, [selectedPage, selectedSection]);
 
@@ -190,6 +301,18 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 
 		return messages;
 	}, [selectedPage]);
+
+	useEffect(() => {
+		if (!selectedSection || !hasUnsavedChanges || isSaving || !!busyAction) {
+			return;
+		}
+
+		const timer = window.setTimeout(() => {
+			void saveSection({ mode: 'autosave' });
+		}, 1400);
+
+		return () => window.clearTimeout(timer);
+	}, [form, hasUnsavedChanges, selectedSection, isSaving, busyAction]);
 
 	function focusField(targetId: string) {
 		const element = document.getElementById(targetId) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
@@ -299,6 +422,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 			'Section reordonnee a la souris.',
 		);
 		setDraggedSectionId(null);
+		setDragOverSectionId(null);
 	}
 
 	function pickPage(pageId: string) {
@@ -399,13 +523,21 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 		}
 	}
 
-	async function saveSection() {
+	async function saveSection(options?: { mode?: 'manual' | 'autosave' }) {
 		if (!selectedSection) {
 			return;
 		}
 
+		const mode = options?.mode || 'manual';
+		const isAutosave = mode === 'autosave';
+
+		if (isAutosave) {
+			setAutosaveState('saving');
+		} else {
+			setSaveMessage('Enregistrement en cours...');
+		}
+
 		setIsSaving(true);
-		setSaveMessage('Enregistrement en cours...');
 
 		const body = new FormData();
 		body.set('sectionId', selectedSection.id);
@@ -435,6 +567,46 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 		body.set(`blockLabel:${BLOCK_STYLE_SPACING}`, 'Hauteur verticale de section');
 		body.set(`blockKind:${BLOCK_STYLE_SPACING}`, 'TEXT');
 
+		body.set(`blockKey:${BLOCK_STYLE_ALIGN}`, form.contentAlign);
+		body.set(`blockLabel:${BLOCK_STYLE_ALIGN}`, 'Alignement du contenu de section');
+		body.set(`blockKind:${BLOCK_STYLE_ALIGN}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_STYLE_HEADING}`, form.headingScale);
+		body.set(`blockLabel:${BLOCK_STYLE_HEADING}`, 'Intensite visuelle du titre de section');
+		body.set(`blockKind:${BLOCK_STYLE_HEADING}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_STYLE_MOBILE_SPACING}`, form.mobileSpacing);
+		body.set(`blockLabel:${BLOCK_STYLE_MOBILE_SPACING}`, 'Densite verticale mobile de section');
+		body.set(`blockKind:${BLOCK_STYLE_MOBILE_SPACING}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_STYLE_MOBILE_ALIGN}`, form.mobileAlign);
+		body.set(`blockLabel:${BLOCK_STYLE_MOBILE_ALIGN}`, 'Alignement mobile de section');
+		body.set(`blockKind:${BLOCK_STYLE_MOBILE_ALIGN}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_ALT}`, form.imageAltText);
+		body.set(`blockLabel:${BLOCK_IMAGE_ALT}`, 'Texte alternatif image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_ALT}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_FOCAL_X}`, String(form.imageFocalX));
+		body.set(`blockLabel:${BLOCK_IMAGE_FOCAL_X}`, 'Position horizontale image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_FOCAL_X}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_FOCAL_Y}`, String(form.imageFocalY));
+		body.set(`blockLabel:${BLOCK_IMAGE_FOCAL_Y}`, 'Position verticale image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_FOCAL_Y}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_ZOOM}`, String(form.imageZoom));
+		body.set(`blockLabel:${BLOCK_IMAGE_ZOOM}`, 'Niveau de zoom image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_ZOOM}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_FIT}`, form.imageFit);
+		body.set(`blockLabel:${BLOCK_IMAGE_FIT}`, 'Mode d ajustement image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_FIT}`, 'TEXT');
+
+		body.set(`blockKey:${BLOCK_IMAGE_RATIO}`, form.imageAspectRatio);
+		body.set(`blockLabel:${BLOCK_IMAGE_RATIO}`, 'Format de cadre image de section');
+		body.set(`blockKind:${BLOCK_IMAGE_RATIO}`, 'TEXT');
+
 		try {
 			const response = await fetch('/api/admin/section-editor', {
 				method: 'POST',
@@ -462,37 +634,45 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 							ctaHref: form.ctaHref || null,
 							imageId: form.imageId || null,
 							isActive: form.isActive,
-							blocks: section.blocks.map((block) => {
-								if (block.key === BLOCK_STYLE_BG) {
-									return { ...block, value: form.backgroundColor };
-								}
-
-								if (block.key === BLOCK_STYLE_TEXT) {
-									return { ...block, value: form.textColor };
-								}
-
-								if (block.key === BLOCK_STYLE_WIDTH) {
-									return { ...block, value: form.contentWidth };
-								}
-
-								if (block.key === BLOCK_STYLE_SPACING) {
-									return { ...block, value: form.verticalSpacing };
-								}
-
-								if (Object.prototype.hasOwnProperty.call(form.extraFields, block.key)) {
-									return { ...block, value: form.extraFields[block.key] };
-								}
-
-								return block;
-							}),
+							blocks: upsertSectionBlocks(section, [
+								{ key: BLOCK_STYLE_BG, value: form.backgroundColor, label: 'Couleur de fond de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_TEXT, value: form.textColor, label: 'Couleur de texte de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_WIDTH, value: form.contentWidth, label: 'Largeur du contenu de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_SPACING, value: form.verticalSpacing, label: 'Hauteur verticale de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_ALIGN, value: form.contentAlign, label: 'Alignement du contenu de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_HEADING, value: form.headingScale, label: 'Intensite visuelle du titre de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_MOBILE_SPACING, value: form.mobileSpacing, label: 'Densite verticale mobile de section', kind: 'TEXT' },
+								{ key: BLOCK_STYLE_MOBILE_ALIGN, value: form.mobileAlign, label: 'Alignement mobile de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_ALT, value: form.imageAltText, label: 'Texte alternatif image de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_FOCAL_X, value: String(form.imageFocalX), label: 'Position horizontale image de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_FOCAL_Y, value: String(form.imageFocalY), label: 'Position verticale image de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_ZOOM, value: String(form.imageZoom), label: 'Niveau de zoom image de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_FIT, value: form.imageFit, label: 'Mode d ajustement image de section', kind: 'TEXT' },
+								{ key: BLOCK_IMAGE_RATIO, value: form.imageAspectRatio, label: 'Format de cadre image de section', kind: 'TEXT' },
+								...Object.entries(form.extraFields).map(([key, value]) => ({
+									key,
+									value,
+									label: key,
+									kind: 'TEXT' as const,
+								})),
+							]),
 						};
 					}),
 				})),
 			);
 
-			setSaveMessage('Section enregistree.');
+			if (isAutosave) {
+				setAutosaveState('saved');
+				setAutosaveStamp(new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+			} else {
+				setSaveMessage('Section enregistree.');
+			}
 		} catch {
-			setSaveMessage('Une erreur est survenue. Verifie les champs puis reessaie.');
+			if (isAutosave) {
+				setAutosaveState('error');
+			} else {
+				setSaveMessage('Une erreur est survenue. Verifie les champs puis reessaie.');
+			}
 		} finally {
 			setIsSaving(false);
 		}
@@ -508,27 +688,88 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 	}
 
 	const selectedModel = inferSectionModel(selectedSection.key);
+	const selectedImageAsset = mediaAssets.find((asset) => asset.id === form.imageId) ?? null;
 	const activeSections = selectedPage.sections.filter((section) => section.isActive);
 	const livePreviewMode = previewMode === 'final' ? 'final' : 'page';
+	const selectedSectionIndex = selectedPage.sections.findIndex((item) => item.id === selectedSection.id);
+	const totalWarnings = selectedChecklist.length + pageChecklist.length;
+
+	function openImageStudio() {
+		setImageStyleBeforeEdit(pickImageStylePatch(form));
+		setIsImageStyleModalOpen(true);
+	}
+
+	function cancelImageStudio() {
+		if (imageStyleBeforeEdit) {
+			setForm((current) => ({ ...current, ...imageStyleBeforeEdit }));
+		}
+		setIsImageStyleModalOpen(false);
+		setImageStyleBeforeEdit(null);
+	}
+
+	function applyImageStudio() {
+		setIsImageStyleModalOpen(false);
+		setImageStyleBeforeEdit(null);
+	}
+
+	function autosaveLabel() {
+		if (autosaveState === 'saving') return 'Autosave en cours...';
+		if (autosaveState === 'saved') return autosaveStamp ? `Autosave effectue a ${autosaveStamp}` : 'Autosave effectue.';
+		if (autosaveState === 'error') return 'Autosave en erreur.';
+		return 'Autosave actif';
+	}
 
 	return (
 		<div className="space-y-6">
 			<section className="panel p-6">
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Page Builder</p>
-						<h3 className="mt-1 text-2xl font-semibold text-ink">{selectedPage.title}</h3>
-						<p className="mt-2 text-sm text-slate-600">{selectedPage.description || 'Compose ta page section par section, puis publie.'}</p>
+						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Document ouvert</p>
+						<h3 className="mt-1 text-2xl font-semibold leading-tight text-ink">{selectedPage.title}</h3>
+						<p className="mt-2 text-sm text-slate-600">{selectedPage.description || 'Travaille la page section par section, sauvegarde et publie en confiance.'}</p>
+						<div className="mt-3 flex flex-wrap gap-2 text-xs">
+							<span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">Slug: /{selectedPage.slug}</span>
+							<span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">{selectedPage.sections.length} sections</span>
+							<span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">{activeSections.length} visibles</span>
+						</div>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
-						<span className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedPage.status === 'PUBLISHED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+						<span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(selectedPage.status)}`}>
 							{statusLabel(selectedPage.status)}
 						</span>
 						{hasUnsavedChanges ? (
-							<span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Modifs non enregistrees</span>
+							<span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">Modifs non enregistrees</span>
 						) : null}
-						<button type="button" onClick={saveSection} disabled={isSaving || !!busyAction} className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50">
-							Sauver cette section
+						<span className={`rounded-full px-3 py-1 text-xs font-semibold ${autosaveState === 'error' ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-200' : autosaveState === 'saving' ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-200' : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'}`}>
+							{autosaveLabel()}
+						</span>
+						{autosaveState === 'error' ? (
+							<button
+								type="button"
+								onClick={() => {
+									void saveSection({ mode: 'autosave' });
+								}}
+								disabled={isSaving || !!busyAction}
+								className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								Retry autosave
+							</button>
+						) : null}
+						{hasUnsavedChanges ? (
+							<button
+								type="button"
+								onClick={() => {
+									setForm(buildSectionForm(selectedSection));
+									setSaveMessage('Modifs locales annulees.');
+								}}
+								disabled={isSaving || !!busyAction}
+								className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								Annuler les modifs
+							</button>
+						) : null}
+						<button type="button" onClick={() => void saveSection({ mode: 'manual' })} disabled={isSaving || !!busyAction} className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50">
+							Sauvegarder la section
 						</button>
 						<button type="button" onClick={publishNow} disabled={isPublishing || !!busyAction} className="button-primary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50">
 							Publier
@@ -536,23 +777,8 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 					</div>
 				</div>
 
-				<div className="mt-4 flex flex-wrap gap-2">
-					{pages.map((page) => (
-						<button
-							key={page.id}
-							type="button"
-							onClick={() => pickPage(page.id)}
-							className={`rounded-full px-4 py-2 text-sm font-semibold ${
-								page.id === selectedPage.id ? 'bg-pine text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-							}`}
-						>
-							{page.title}
-						</button>
-					))}
-				</div>
-
 				{(builderMessage || saveMessage) && (
-					<p className="mt-3 text-xs text-slate-600">{builderMessage || saveMessage}</p>
+					<p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">{builderMessage || saveMessage}</p>
 				)}
 			</section>
 
@@ -562,10 +788,52 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 				</section>
 			) : null}
 
-			<section className="grid gap-6 lg:grid-cols-[minmax(320px,0.9fr)_minmax(580px,1.4fr)_minmax(360px,1fr)] xl:grid-cols-[minmax(340px,0.95fr)_minmax(680px,1.5fr)_minmax(380px,1fr)]">
+			<section className="grid gap-6 lg:grid-cols-[minmax(240px,0.72fr)_minmax(320px,0.95fr)_minmax(620px,1.45fr)_minmax(360px,1fr)]">
+				<div className="panel min-h-[72vh] p-4">
+					<div className="flex items-start justify-between gap-2">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Explorateur</p>
+							<h4 className="mt-1 text-lg font-semibold text-ink">Pages et documents</h4>
+						</div>
+						<span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">{pages.length}</span>
+					</div>
+
+					<div className="mt-4 space-y-2">
+						{pages.map((page) => (
+							<button
+								key={page.id}
+								type="button"
+								onClick={() => pickPage(page.id)}
+								className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+									page.id === selectedPage.id
+										? 'border-pine/60 bg-pine/5 shadow-[0_12px_24px_rgba(31,77,75,0.12)]'
+										: 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+								}`}
+							>
+								<div className="flex items-start justify-between gap-2">
+									<p className="text-sm font-semibold text-ink">{page.title}</p>
+									<span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${statusBadgeClass(page.status)}`}>{statusLabel(page.status)}</span>
+								</div>
+								<p className="mt-1 text-xs text-slate-500">/{page.slug}</p>
+								<p className="mt-2 text-xs text-slate-600">{page.sections.length} sections</p>
+							</button>
+						))}
+					</div>
+
+					<section className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-3">
+						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">Securite de travail</p>
+						<ul className="mt-2 space-y-1 text-xs leading-5 text-emerald-800">
+							<li>Brouillon et publication sont separes.</li>
+							<li>Confirmation avant suppression.</li>
+							<li>Checklist anti-erreur avant publication.</li>
+						</ul>
+					</section>
+				</div>
+
 				<div className="panel flex min-h-[72vh] flex-col p-4">
-					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Structure</p>
-					<h4 className="mt-1 text-lg font-semibold text-ink">Sections de la page</h4>
+					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Document actif</p>
+					<h4 className="mt-1 text-lg font-semibold text-ink">Structure des sections</h4>
+					<p className="mt-1 text-xs text-slate-500">Glisse une section pour reordonner comme dans un vrai explorateur.</p>
 
 					<div className="mt-4 space-y-3 overflow-y-auto pr-1">
 						{selectedPage.sections.map((section, index) => (
@@ -574,6 +842,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 								section={section}
 								index={index}
 								active={section.id === selectedSection.id}
+								dropTarget={dragOverSectionId === section.id && draggedSectionId !== section.id}
 								onEdit={() => pickSection(section)}
 								onMoveUp={() => runBuilderAction('move-section', { sectionId: section.id, direction: 'up' }, 'Section deplacee vers le haut.')}
 								onMoveDown={() => runBuilderAction('move-section', { sectionId: section.id, direction: 'down' }, 'Section deplacee vers le bas.')}
@@ -586,10 +855,24 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 
 									runBuilderAction('delete-section', { sectionId: section.id }, 'Section supprimee.');
 								}}
-								onDragStart={() => setDraggedSectionId(section.id)}
-								onDragEnd={() => setDraggedSectionId(null)}
-								onDropOnCard={() => reorderByDrag(section.id)}
-								onDragOverCard={(event) => event.preventDefault()}
+								onDragStart={() => {
+									setDraggedSectionId(section.id);
+									setDragOverSectionId(section.id);
+								}}
+								onDragEnd={() => {
+									setDraggedSectionId(null);
+									setDragOverSectionId(null);
+								}}
+								onDropOnCard={() => {
+									setDragOverSectionId(null);
+									reorderByDrag(section.id);
+								}}
+								onDragOverCard={(event) => {
+									event.preventDefault();
+									if (draggedSectionId && draggedSectionId !== section.id) {
+										setDragOverSectionId(section.id);
+									}
+								}}
 								disableMoveUp={index === 0}
 								disableMoveDown={index === selectedPage.sections.length - 1}
 								disableDelete={selectedPage.sections.length <= 1}
@@ -598,7 +881,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 						))}
 					</div>
 
-					<div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+					<div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/85 p-3">
 						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Bibliotheque de blocs</p>
 						<input
 							type="text"
@@ -614,7 +897,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 									type="button"
 									onClick={() => runBuilderAction('add-section', { pageId: selectedPage.id, templateId: template.id }, `Bloc ajoute: ${template.label}.`)}
 									disabled={!!busyAction}
-									className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:border-pine hover:text-pine disabled:cursor-not-allowed disabled:opacity-50"
+									className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:border-pine hover:text-pine hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									{template.label}
 								</button>
@@ -629,51 +912,48 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 				<div className="panel min-h-[72vh] p-4">
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<div>
-							<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Apercu page</p>
+							<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Canevas</p>
 							<p className="mt-1 text-sm text-slate-600">
 								{previewMode === 'final'
 									? 'Rendu final sans repere d editeur.'
-									: 'Mode edition avec controle visuel.'}
+									: 'Mode edition avec controle visuel de section.'}
 							</p>
 						</div>
 						<div className="flex flex-wrap gap-2">
 							<button
 								type="button"
 								onClick={() => setPreviewMode('editing')}
-								className={`rounded-full px-3 py-1 text-xs font-semibold ${previewMode === 'editing' ? 'bg-pine text-white' : 'bg-slate-100 text-slate-700'}`}
+								className={`rounded-full px-3 py-1 text-xs font-semibold transition ${previewMode === 'editing' ? 'bg-pine text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
 							>
 								Edition
 							</button>
 							<button
 								type="button"
 								onClick={() => setPreviewMode('final')}
-								className={`rounded-full px-3 py-1 text-xs font-semibold ${previewMode === 'final' ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-700'}`}
+								className={`rounded-full px-3 py-1 text-xs font-semibold transition ${previewMode === 'final' ? 'bg-slate-950 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
 							>
 								Apercu final
 							</button>
 						</div>
 					</div>
 
-					<section className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Structure rapide</p>
+					<section className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/85 p-3">
+						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Actions rapides</p>
 						<p className="mt-1 text-xs text-slate-600">Section active: {selectedSection.title || selectedSection.name}</p>
 						<div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
 							<button
 								type="button"
 								onClick={() => runBuilderAction('move-section', { sectionId: selectedSection.id, direction: 'up' }, 'Section deplacee vers le haut.')}
-								disabled={!!busyAction || selectedPage.sections.findIndex((item) => item.id === selectedSection.id) === 0}
-								className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+								disabled={!!busyAction || selectedSectionIndex === 0}
+								className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								Monter
 							</button>
 							<button
 								type="button"
 								onClick={() => runBuilderAction('move-section', { sectionId: selectedSection.id, direction: 'down' }, 'Section deplacee vers le bas.')}
-								disabled={
-									!!busyAction ||
-									selectedPage.sections.findIndex((item) => item.id === selectedSection.id) === selectedPage.sections.length - 1
-								}
-								className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+									disabled={!!busyAction || selectedSectionIndex === selectedPage.sections.length - 1}
+									className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								Descendre
 							</button>
@@ -681,7 +961,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 								type="button"
 								onClick={() => runBuilderAction('duplicate-section', { sectionId: selectedSection.id }, 'Section dupliquee.')}
 								disabled={!!busyAction}
-								className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+								className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:border-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								Dupliquer
 							</button>
@@ -695,7 +975,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 									)
 								}
 								disabled={!!busyAction}
-								className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+								className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								{selectedSection.isActive ? 'Masquer' : 'Afficher'}
 							</button>
@@ -710,7 +990,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 									runBuilderAction('delete-section', { sectionId: selectedSection.id }, 'Section supprimee.');
 								}}
 								disabled={!!busyAction || selectedPage.sections.length <= 1}
-								className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+								className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
 							>
 								Supprimer
 							</button>
@@ -752,9 +1032,23 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 									: 'max-w-none'
 						}`}
 					>
+						<div className="rounded-[30px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(241,245,249,0.8))] p-4 shadow-inner">
+							<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Studio visuel</p>
+							<p className="mt-1 text-xs text-slate-600">Clique une section pour ouvrir ses proprietes dans la colonne de droite.</p>
+						</div>
 						{activeSections.map((section) => {
 							const previewForm = section.id === selectedSection.id ? form : buildSectionForm(section);
-							return <LivePreview key={section.id} section={section} form={previewForm} mediaAssets={mediaAssets} mode={livePreviewMode} />;
+							return (
+								<LivePreview
+									key={section.id}
+									section={section}
+									form={previewForm}
+									mediaAssets={mediaAssets}
+									mode={livePreviewMode}
+									selected={section.id === selectedSection.id}
+									onSelect={() => pickSection(section)}
+								/>
+							);
 						})}
 						{activeSections.length === 0 ? (
 							<div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
@@ -765,11 +1059,30 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 				</div>
 
 				<div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1">
+					<section className="panel p-4">
+						<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Statut de travail</p>
+						<div className="mt-3 space-y-2 text-sm">
+							<p className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+								<span className="text-slate-600">Document</span>
+								<span className="font-semibold text-ink">{selectedPage.title}</span>
+							</p>
+							<p className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+								<span className="text-slate-600">Etat</span>
+								<span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${statusBadgeClass(selectedPage.status)}`}>{statusLabel(selectedPage.status)}</span>
+							</p>
+							<p className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+								<span className="text-slate-600">Alertes</span>
+								<span className="font-semibold text-ink">{totalWarnings}</span>
+							</p>
+						</div>
+					</section>
+
 					<SectionEditor
 						section={selectedSection}
 						sectionModel={selectedModel}
 						form={form}
 						mediaAssets={mediaAssets}
+						onOpenImageStyle={openImageStudio}
 						onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
 						onChangeExtraField={(key, value) =>
 							setForm((current) => ({
@@ -780,9 +1093,29 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId }: Page
 								},
 							}))
 						}
-						onSave={saveSection}
+						onSave={() => void saveSection({ mode: 'manual' })}
 						isSaving={isSaving}
 						saveMessage={saveMessage}
+					/>
+
+					<ImageStyleModal
+						open={isImageStyleModalOpen}
+						image={selectedImageAsset}
+						value={{
+							imageAltText: form.imageAltText,
+							imageFocalX: form.imageFocalX,
+							imageFocalY: form.imageFocalY,
+							imageZoom: form.imageZoom,
+							imageFit: form.imageFit,
+							imageAspectRatio: form.imageAspectRatio,
+						}}
+						onClose={applyImageStudio}
+						onCancel={cancelImageStudio}
+						onLiveChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+						onApply={(patch) => {
+							setForm((current) => ({ ...current, ...patch }));
+							applyImageStudio();
+						}}
 					/>
 
 					<section className="panel p-4">

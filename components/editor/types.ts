@@ -47,10 +47,20 @@ export interface SectionFormState {
   ctaLabel: string;
   ctaHref: string;
   imageId: string;
+  imageAltText: string;
+  imageFocalX: number;
+  imageFocalY: number;
+  imageZoom: number;
+  imageFit: 'cover' | 'contain';
+  imageAspectRatio: 'auto' | '16/9' | '4/3' | '1/1';
   backgroundColor: string;
   textColor: string;
   contentWidth: 'compact' | 'normal' | 'wide';
   verticalSpacing: 'tight' | 'normal' | 'airy';
+  contentAlign: 'left' | 'center';
+  headingScale: 'sm' | 'md' | 'lg';
+  mobileSpacing: 'inherit' | 'compact' | 'comfortable' | 'airy';
+  mobileAlign: 'inherit' | 'left' | 'center';
   isActive: boolean;
   extraFields: Record<string, string>;
 }

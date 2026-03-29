@@ -8,8 +8,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminShell
-      title="Atelier visuel du site"
-      description="Choisis une piece, pose une photo, change les couleurs et vois le resultat tout de suite."
+      title="Studio de pages"
+      description="Ouvre tes pages comme des documents, modifie section par section, verifie en apercu puis publie en gardant un flux brouillon fiable."
       adminName={session.name}
     >
       {children}

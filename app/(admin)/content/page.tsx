@@ -3,7 +3,7 @@ import type { EditorMediaAsset, EditorPage } from '@/components/editor/types';
 import { getContentSections, getMediaLibrary } from '@/lib/admin-data';
 import { inferSectionModel } from '@/lib/site-section-model';
 
-export default async function ContentPage({ searchParams }: { searchParams?: { mediaId?: string } }) {
+export default async function ContentPage({ searchParams }: { searchParams?: { mediaId?: string; doc?: string } }) {
   const [pages, media] = await Promise.all([getContentSections(), getMediaLibrary()]);
 
   const editorPages: EditorPage[] = pages.map((page) => ({
@@ -48,5 +48,17 @@ export default async function ContentPage({ searchParams }: { searchParams?: { m
     usedInSections: asset.sections.map((section) => section.name),
   }));
 
-  return <PageEditor initialPages={editorPages} mediaAssets={mediaAssets} suggestedMediaId={searchParams?.mediaId} />;
+  const requestedDoc = (searchParams?.doc ?? '').trim().toLowerCase();
+  const initialSelectedPageId = requestedDoc
+    ? editorPages.find((page) => page.slug.toLowerCase() === requestedDoc || page.title.toLowerCase().includes(requestedDoc))?.id
+    : undefined;
+
+  return (
+    <PageEditor
+      initialPages={editorPages}
+      mediaAssets={mediaAssets}
+      suggestedMediaId={searchParams?.mediaId}
+      initialSelectedPageId={initialSelectedPageId}
+    />
+  );
 }

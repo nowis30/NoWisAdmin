@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionFromRequest } from '@/lib/auth';
 import { buildPublishPayload } from '@/lib/admin-data';
+import { evaluatePublishQuality } from '@/lib/publish-quality-gate';
 import { prisma } from '@/lib/prisma';
 
 function valueOf(formData: FormData, key: string) {
@@ -17,6 +18,16 @@ export async function POST(request: NextRequest) {
 
   const formData = await request.formData();
   const payload = await buildPublishPayload();
+  const gate = evaluatePublishQuality(payload);
+
+  if (gate.isBlocked) {
+    const url = new URL('/publish', request.url);
+    url.searchParams.set('gate', 'blocked');
+    url.searchParams.set('blocking', String(gate.blocking.length));
+    url.searchParams.set('warnings', String(gate.warnings.length));
+    url.searchParams.set('suggestions', String(gate.suggestions.length));
+    return NextResponse.redirect(url);
+  }
 
   await prisma.publishSnapshot.create({
     data: {

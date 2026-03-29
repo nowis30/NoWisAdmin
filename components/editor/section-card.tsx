@@ -5,6 +5,7 @@ import type { EditorSection } from '@/components/editor/types';
 interface SectionCardProps {
   section: EditorSection;
   active: boolean;
+  dropTarget?: boolean;
   index: number;
   onEdit: () => void;
   onMoveUp: () => void;
@@ -24,6 +25,7 @@ interface SectionCardProps {
 export function SectionCard({
   section,
   active,
+  dropTarget = false,
   index,
   onEdit,
   onMoveUp,
@@ -43,14 +45,20 @@ export function SectionCard({
     <article
       onDrop={onDropOnCard}
       onDragOver={onDragOverCard}
-      className={`group rounded-3xl border p-4 transition ${active ? 'border-pine bg-white shadow-sm' : 'border-slate-200 bg-slate-50 hover:border-slate-300'} ${busy ? 'cursor-not-allowed' : ''}`}
+      className={`group relative rounded-3xl border p-4 transition-all duration-200 ${
+        active
+          ? 'border-pine/70 bg-white shadow-[0_12px_28px_rgba(31,77,75,0.14)] ring-1 ring-pine/20'
+          : 'border-slate-200/80 bg-white/75 shadow-[0_4px_14px_rgba(15,23,42,0.05)] hover:border-slate-300 hover:shadow-[0_12px_24px_rgba(15,23,42,0.09)]'
+      } ${dropTarget ? 'border-pine/80 ring-2 ring-pine/35' : ''} ${busy ? 'cursor-not-allowed' : ''}`}
     >
+      {active ? <span className="absolute left-0 top-4 h-10 w-1 rounded-r-full bg-pine" aria-hidden="true" /> : null}
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Zone</p>
-          <h4 className="mt-1 text-lg font-semibold text-ink">{index + 1}. {section.title || 'Sans titre'}</h4>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Zone</p>
+          <h4 className="mt-1 text-base font-semibold leading-snug text-ink">{index + 1}. {section.title || 'Sans titre'}</h4>
           <p className="mt-1 text-xs text-slate-500">Type: {section.modelName}</p>
-          <p className="mt-2 line-clamp-2 text-sm text-slate-600">{section.description || 'Ajoute un petit texte pour cette zone.'}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-600">{section.description || 'Ajoute un petit texte pour cette zone.'}</p>
         </div>
         <div className="flex shrink-0 items-start gap-2">
           <div
@@ -71,25 +79,25 @@ export function SectionCard({
             </div>
           </div>
 
-          <div className={`rounded-full px-3 py-1 text-xs font-medium ${section.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${section.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
             {section.isActive ? 'Visible' : 'Masquee'}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200/70 pt-3">
         <p className="text-xs text-slate-500">Bouton: {section.ctaLabel || 'Pas encore ajoute'}</p>
         <button type="button" onClick={onEdit} disabled={busy} className="button-secondary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50">
           Retoucher
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 lg:opacity-0 lg:transition-opacity lg:duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:opacity-0 lg:transition-opacity lg:duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
         <button
           type="button"
           onClick={onMoveUp}
           disabled={busy || disableMoveUp}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Monter
         </button>
@@ -97,7 +105,7 @@ export function SectionCard({
           type="button"
           onClick={onMoveDown}
           disabled={busy || disableMoveDown}
-          className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Descendre
         </button>
@@ -105,7 +113,7 @@ export function SectionCard({
           type="button"
           onClick={onDuplicate}
           disabled={busy}
-          className="rounded-xl border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:border-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Dupliquer
         </button>
@@ -113,7 +121,7 @@ export function SectionCard({
           type="button"
           onClick={onDelete}
           disabled={busy || disableDelete}
-          className="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Supprimer
         </button>

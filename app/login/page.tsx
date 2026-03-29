@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 
 export default function LoginPage({ searchParams }: { searchParams?: { error?: string; next?: string } }) {
   const hasError = searchParams?.error === '1';
+  const hasServiceError = searchParams?.error === 'service';
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -50,6 +51,12 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
             {hasError ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 Identifiants invalides.
+              </div>
+            ) : null}
+
+            {hasServiceError ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Service de connexion indisponible. Verifie NOWIS_ADMIN_DATABASE_URL sur Vercel puis redeploie.
               </div>
             ) : null}
 

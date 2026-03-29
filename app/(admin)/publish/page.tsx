@@ -1,15 +1,25 @@
 import { prisma } from '@/lib/prisma';
+import { buildPublishPayload } from '@/lib/admin-data';
+import { evaluatePublishQuality } from '@/lib/publish-quality-gate';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PublishPage({ searchParams }: { searchParams?: { published?: string } }) {
+export default async function PublishPage({ searchParams }: { searchParams?: { published?: string; gate?: string; blocking?: string; warnings?: string; suggestions?: string } }) {
   let snapshots: Array<{ id: string; createdAt: Date; notes: string | null }> = [];
   let dbUnavailable = false;
+  let quality = null as ReturnType<typeof evaluatePublishQuality> | null;
 
   try {
     snapshots = await prisma.publishSnapshot.findMany({ take: 8, orderBy: { createdAt: 'desc' } });
   } catch {
     dbUnavailable = true;
+  }
+
+  try {
+    const payload = await buildPublishPayload();
+    quality = evaluatePublishQuality(payload);
+  } catch {
+    quality = null;
   }
 
   return (
@@ -27,12 +37,54 @@ export default async function PublishPage({ searchParams }: { searchParams?: { p
             <p className="mt-2 text-xs text-slate-500">Cette note aide a retrouver rapidement ce qui a ete modifie.</p>
           </div>
 
-          <button type="submit" className="button-primary">Publier maintenant</button>
+          <button type="submit" disabled={quality?.isBlocked} className="button-primary disabled:cursor-not-allowed disabled:opacity-50">Publier maintenant</button>
         </form>
+
+        {quality ? (
+          <div className="mt-4 space-y-3">
+            {quality.blocking.length > 0 ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p className="font-semibold">Blocage ({quality.blocking.length})</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {quality.blocking.slice(0, 6).map((issue, index) => (
+                    <li key={`blocking-${index}`}>- [{issue.pageSlug}] {issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {quality.warnings.length > 0 ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <p className="font-semibold">Avertissement ({quality.warnings.length})</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {quality.warnings.slice(0, 4).map((issue, index) => (
+                    <li key={`warning-${index}`}>- [{issue.pageSlug}] {issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {quality.suggestions.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <p className="font-semibold">Suggestion ({quality.suggestions.length})</p>
+                <ul className="mt-2 space-y-1 text-xs">
+                  {quality.suggestions.slice(0, 3).map((issue, index) => (
+                    <li key={`suggestion-${index}`}>- [{issue.pageSlug}] {issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {searchParams?.published === '1' ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             Publication enregistree avec succes.
+          </div>
+        ) : null}
+        {searchParams?.gate === 'blocked' ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Publication stoppee: corrige d abord les points bloquants.
           </div>
         ) : null}
         {dbUnavailable ? (
