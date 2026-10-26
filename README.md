@@ -92,7 +92,7 @@ Le site public lit le payload admin avec fallback de securite pendant la transit
 
 ## Stack technique
 
-- Next.js 14 + App Router
+- Next.js 15 + App Router (Node.js 24)
 - TypeScript
 - Tailwind CSS
 - Prisma
@@ -106,11 +106,32 @@ copy .env.example .env
 npm install
 npm run prisma:generate
 npm run db:push
-npm run db:seed
 npm run dev
 ```
 
 Puis ouvrir http://localhost:3000.
+
+Renseigner un `ADMIN_JWT_SECRET` unique d'au moins 32 octets avant la connexion
+(par exemple avec `openssl rand -base64 48`). Aucun secret de secours n'est accepté.
+Un changement de secret invalide les sessions existantes.
+
+Les redirections après formulaire utilisent HTTP 303 afin que le navigateur ne
+renvoie pas les données POST. La destination de connexion est limitée à un chemin
+du même site, y compris après normalisation des barres obliques et caractères encodés.
+
+Le seed de démonstration efface les données. Il est réservé à une base locale
+jetable : définir explicitement `ALLOW_DESTRUCTIVE_DEMO_SEED=true`,
+`ADMIN_EMAIL` et `ADMIN_PASSWORD` avant `npm run db:seed` ou `npm run db:reset`.
+Le mot de passe doit contenir au moins 16 caractères et au plus 72 octets UTF-8.
+Ces commandes restent interdites en production, même avec l'option activée.
+La route d'initialisation administrative existante exige également des
+identifiants explicites ; les anciens mots de passe d'exemple sont refusés.
+
+## Vérification des changements
+
+`npm test` vérifie les garde-fous d'authentification et le contrat de publication.
+`npm run type-check`, `npm run lint` et `npm run build` complètent la validation.
+La CI exécute ces contrôles sur les pull requests avec des valeurs de test.
 
 ## Variables importantes
 
@@ -123,6 +144,7 @@ Definies dans .env:
 - ADMIN_JWT_SECRET
 - ADMIN_SEED_TOKEN (optionnel, route seed)
 - ALLOW_ADMIN_SEED_IN_PROD (optionnel, doit etre `true` pour autoriser seed en production)
+- ALLOW_DESTRUCTIVE_DEMO_SEED (optionnel, uniquement pour une base locale jetable)
 - BLOB_READ_WRITE_TOKEN (requis en production Vercel pour upload/remplacement d images)
 
 ## Routes principales

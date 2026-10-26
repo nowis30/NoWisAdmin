@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdminSeedCredentials } from '@/lib/admin-config';
 
 /**
  * POST /api/admin/seed
@@ -44,9 +45,7 @@ export async function POST(request: Request) {
     }
 
     // Prepare admin credentials from env
-    const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nowis.local';
-    const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMeNowis123!';
-    const adminName = process.env.ADMIN_NAME ?? 'NoWis Admin';
+    const { email: adminEmail, password: adminPassword, name: adminName } = requireAdminSeedCredentials();
     const passwordHash = await bcrypt.hash(adminPassword, 10);
 
     // Upsert admin user

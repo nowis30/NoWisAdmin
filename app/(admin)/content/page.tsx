@@ -3,7 +3,8 @@ import type { EditorMediaAsset, EditorPage } from '@/components/editor/types';
 import { getContentSections, getMediaLibrary } from '@/lib/admin-data';
 import { inferSectionModel } from '@/lib/site-section-model';
 
-export default async function ContentPage({ searchParams }: { searchParams?: { mediaId?: string; doc?: string } }) {
+export default async function ContentPage({ searchParams: searchParamsPromise }: { searchParams?: Promise<{ mediaId?: string; doc?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const [pages, media] = await Promise.all([getContentSections(), getMediaLibrary()]);
 
   const editorPages: EditorPage[] = pages.map((page) => ({

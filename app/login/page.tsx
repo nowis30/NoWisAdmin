@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 
-export default function LoginPage({ searchParams }: { searchParams?: { error?: string; next?: string } }) {
+export default async function LoginPage({ searchParams: searchParamsPromise }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
+  const searchParams = await searchParamsPromise;
   const hasError = searchParams?.error === '1';
   const hasServiceError = searchParams?.error === 'service';
 

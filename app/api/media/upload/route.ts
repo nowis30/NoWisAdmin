@@ -23,7 +23,7 @@ function logBlobError(stage: 'token' | 'native', error: unknown) {
 export async function POST(request: NextRequest) {
   const session = getSessionFromRequest(request);
   if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url), 303);
   }
 
   const formData = await request.formData();
@@ -31,19 +31,19 @@ export async function POST(request: NextRequest) {
   const altText = String(formData.get('altText') ?? '').trim();
 
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.redirect(new URL('/media?error=file', request.url));
+    return NextResponse.redirect(new URL('/media?error=file', request.url), 303);
   }
 
   // Keep uploads conservative to reduce provider-side request rejections.
   if (file.size > 4 * 1024 * 1024) {
-    return NextResponse.redirect(new URL('/media?error=file-too-large', request.url));
+    return NextResponse.redirect(new URL('/media?error=file-too-large', request.url), 303);
   }
 
   const isProd = process.env.NODE_ENV === 'production';
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   const hasBlobToken = Boolean(blobToken);
   if (isProd && !hasBlobToken) {
-    return NextResponse.redirect(new URL('/media?error=storage-token', request.url));
+    return NextResponse.redirect(new URL('/media?error=storage-token', request.url), 303);
   }
 
   try {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         } catch (fallbackError) {
           logBlobError('native', fallbackError);
           const code = classifyBlobError(fallbackError || errorWithToken);
-          return NextResponse.redirect(new URL(`/media?error=${code}`, request.url));
+          return NextResponse.redirect(new URL(`/media?error=${code}`, request.url), 303);
         }
       }
     } else {
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(new URL('/media?uploaded=1', request.url));
+    return NextResponse.redirect(new URL('/media?uploaded=1', request.url), 303);
   } catch {
-    return NextResponse.redirect(new URL('/media?error=upload', request.url));
+    return NextResponse.redirect(new URL('/media?error=upload', request.url), 303);
   }
 }

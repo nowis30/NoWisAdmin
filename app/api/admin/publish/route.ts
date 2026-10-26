@@ -13,7 +13,7 @@ function valueOf(formData: FormData, key: string) {
 
 export async function POST(request: NextRequest) {
   if (!getSessionFromRequest(request)) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url), 303);
   }
 
   const formData = await request.formData();
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     url.searchParams.set('blocking', String(gate.blocking.length));
     url.searchParams.set('warnings', String(gate.warnings.length));
     url.searchParams.set('suggestions', String(gate.suggestions.length));
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, 303);
   }
 
   await prisma.publishSnapshot.create({
@@ -39,5 +39,5 @@ export async function POST(request: NextRequest) {
   revalidatePath('/publish');
   revalidatePath('/preview');
   revalidatePath('/dashboard');
-  return NextResponse.redirect(new URL('/publish?published=1', request.url));
+  return NextResponse.redirect(new URL('/publish?published=1', request.url), 303);
 }

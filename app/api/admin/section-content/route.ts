@@ -11,7 +11,7 @@ function valueOf(formData: FormData, key: string) {
 
 export async function POST(request: NextRequest) {
   if (!getSessionFromRequest(request)) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url), 303);
   }
 
   const formData = await request.formData();
@@ -40,5 +40,5 @@ export async function POST(request: NextRequest) {
 
   revalidatePath('/content');
   revalidatePath('/preview');
-  return NextResponse.redirect(new URL('/content?saved=1', request.url));
+  return NextResponse.redirect(new URL('/content?saved=1', request.url), 303);
 }

@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { getMediaLibrary } from '@/lib/admin-data';
 
 export default async function MediaPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams?: { uploaded?: string; replaced?: string; error?: string };
+  searchParams?: Promise<{ uploaded?: string; replaced?: string; error?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const media = await getMediaLibrary();
   const isProd = process.env.NODE_ENV === 'production';
   const storageMode = process.env.BLOB_READ_WRITE_TOKEN ? 'Vercel Blob' : 'Local';

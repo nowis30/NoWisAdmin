@@ -3,8 +3,8 @@ import { requireAdminSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = requireAdminSession();
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await requireAdminSession();
 
   return (
     <AdminShell
