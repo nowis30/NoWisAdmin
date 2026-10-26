@@ -1,0 +1,51 @@
+name: Validate admin
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: admin_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d admin_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NOWIS_ADMIN_DATABASE_URL: postgresql://ci:ci@localhost:5432/admin_test
+      ADMIN_JWT_SECRET: ci-only-not-a-production-secret-0000000000000000
+      ADMIN_EMAIL: ci@example.test
+      ADMIN_PASSWORD: ci-only-local-test-password-000000
+      ALLOW_DESTRUCTIVE_DEMO_SEED: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run db:push
+      - run: npm run db:seed
+      - run: npm run test
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run build

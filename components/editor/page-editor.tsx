@@ -784,7 +784,7 @@ export function PageEditor({ initialPages, mediaAssets, suggestedMediaId, initia
 
 			{suggestedMediaId ? (
 				<section className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-					Photo choisie. Clique sur "Retoucher" puis selectionne cette photo dans "Photo de cette zone".
+					Photo choisie. Clique sur &quot;Retoucher&quot; puis selectionne cette photo dans &quot;Photo de cette zone&quot;.
 				</section>
 			) : null}
 

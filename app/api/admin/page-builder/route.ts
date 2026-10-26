@@ -76,7 +76,7 @@ async function getPageSectionsPayload(pageId: string) {
 
 export async function POST(request: NextRequest) {
   if (!getSessionFromRequest(request)) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', request.url), 303);
   }
 
   const formData = await request.formData();

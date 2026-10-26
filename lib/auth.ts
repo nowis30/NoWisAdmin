@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { requireAdminJwtSecret } from '@/lib/admin-config';
 
 export const ADMIN_AUTH_COOKIE = 'nowis_admin_session';
 
@@ -14,17 +15,17 @@ type AdminTokenPayload = {
   name: string;
 };
 
-function getJwtSecret() {
-  return process.env.ADMIN_JWT_SECRET ?? 'change-this-secret-before-production';
-}
-
 export function signAuthToken(payload: AdminTokenPayload) {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
+  return jwt.sign(payload, requireAdminJwtSecret(), { expiresIn: '7d', algorithm: 'HS256' });
 }
 
 export function verifyAuthToken(token: string) {
   try {
-    return jwt.verify(token, getJwtSecret()) as AdminTokenPayload;
+    const payload = jwt.verify(token, requireAdminJwtSecret(), { algorithms: ['HS256'] });
+    if (typeof payload === 'string' || typeof payload.sub !== 'string' || !payload.sub ||
+      typeof payload.email !== 'string' || !payload.email || typeof payload.name !== 'string' ||
+      typeof payload.exp !== 'number') return null;
+    return payload as AdminTokenPayload;
   } catch {
     return null;
   }
@@ -45,8 +46,8 @@ export async function authenticateAdmin(email: string, password: string) {
   return admin;
 }
 
-export function getSessionFromCookieStore() {
-  const token = cookies().get(ADMIN_AUTH_COOKIE)?.value;
+export async function getSessionFromCookieStore() {
+  const token = (await cookies()).get(ADMIN_AUTH_COOKIE)?.value;
   return token ? verifyAuthToken(token) : null;
 }
 
@@ -55,8 +56,8 @@ export function getSessionFromRequest(request: NextRequest) {
   return token ? verifyAuthToken(token) : null;
 }
 
-export function requireAdminSession() {
-  const session = getSessionFromCookieStore();
+export async function requireAdminSession() {
+  const session = await getSessionFromCookieStore();
   if (!session) redirect('/login');
   return session;
 }

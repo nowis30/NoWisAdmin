@@ -4,7 +4,8 @@ import { evaluatePublishQuality } from '@/lib/publish-quality-gate';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PublishPage({ searchParams }: { searchParams?: { published?: string; gate?: string; blocking?: string; warnings?: string; suggestions?: string } }) {
+export default async function PublishPage({ searchParams: searchParamsPromise }: { searchParams?: Promise<{ published?: string; gate?: string; blocking?: string; warnings?: string; suggestions?: string }> }) {
+  const searchParams = await searchParamsPromise;
   let snapshots: Array<{ id: string; createdAt: Date; notes: string | null }> = [];
   let dbUnavailable = false;
   let quality = null as ReturnType<typeof evaluatePublishQuality> | null;

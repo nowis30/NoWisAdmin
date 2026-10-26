@@ -1,12 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient, ContentBlockKind, PageStatus } from '@prisma/client';
+import { assertDemoSeedAllowed, requireAdminSeedCredentials } from '../lib/admin-config';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nowis.local';
-  const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMeNowisAdmin123!';
-  const adminName = process.env.ADMIN_NAME ?? 'NoWis Admin';
+  assertDemoSeedAllowed();
+  const { email: adminEmail, password: adminPassword, name: adminName } = requireAdminSeedCredentials();
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
   await prisma.contentBlock.deleteMany();
@@ -381,7 +381,6 @@ async function main() {
 
   console.log('NoWisAdmin database seeded successfully');
   console.log(`Admin login: ${adminEmail}`);
-  console.log(`Admin password: ${adminPassword}`);
 }
 
 main()
